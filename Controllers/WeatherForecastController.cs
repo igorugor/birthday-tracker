@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using BirthdayTracker.Models;
 
 namespace BirthdayTracker.Controllers;
 

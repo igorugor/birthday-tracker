@@ -1,4 +1,10 @@
+using Microsoft.EntityFrameworkCore;
+using BirthdayTracker.Database;
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DbConnection")));
 
 // Add services to the container.
 
