@@ -3,12 +3,8 @@ using BirthdayTracker.Models;
 
 namespace BirthdayTracker.Database;
 
-public class AppDbContext: DbContext
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
- public AppDbContext(DbContextOptions<AppDbContext> options)
-        : base(options)
-    {
-    }
-
     public DbSet<Todo> Todos { get; set; }
+    public DbSet<User> Users { get; set; }
 }

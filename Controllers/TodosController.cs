@@ -7,14 +7,9 @@ namespace BirthdayTracker.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TodosController : ControllerBase
+    public class TodosController(AppDbContext context) : ControllerBase
     {
-        private readonly AppDbContext _context;
-
-        public TodosController(AppDbContext context)
-        {
-            _context = context;
-        }
+        private readonly AppDbContext _context = context;
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Todo>>> GetTodos()
