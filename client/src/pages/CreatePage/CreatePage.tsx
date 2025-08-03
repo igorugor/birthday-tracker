@@ -18,7 +18,7 @@ export const CreatePage = () => {
 
 	const [birthday, setBirthday] = useState<string | null>(null);
 
-	const { data } = useQuery({
+	const { data, isFetching } = useQuery({
 		queryKey: ['getUser', { id }],
 		queryFn: () => {
 			if (id) {
@@ -79,6 +79,8 @@ export const CreatePage = () => {
 					} else {
 						createUserMutation.mutate(formData);
 					}
+				} else {
+					alert('Введите корректные данные');
 				}
 			}}
 		>
@@ -95,6 +97,7 @@ export const CreatePage = () => {
 			<input name="name" ref={nameRef} />
 			<label>Дата рождения</label>
 			<DatePicker
+				maxDate={moment()}
 				value={birthday ? moment(birthday) : null}
 				onChange={(value) => {
 					if (moment.isMoment(value)) {
@@ -102,7 +105,7 @@ export const CreatePage = () => {
 					}
 				}}
 			/>
-			<button type="submit">Сохранить</button>
+			<button type="submit">{isFetching ? 'Обработка...' : 'Сохранить'}</button>
 		</form>
 	);
 };
