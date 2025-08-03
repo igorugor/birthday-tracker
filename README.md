@@ -25,3 +25,21 @@
 ## Страница добавления пользователя
 
 ![Страница добавления пользователя](README/create-user.png)
+
+## Run Locally
+
+```bash
+# Клонируем репозиторий
+git clone https://github.com/igorugor/birthday-tracker.git
+cd client
+#Установить зависимости для клиентского приложения
+yarn
+#Локальный запуск
+yarn dev
+```
+
+#### Для запуска серверного приложения нужна `Visual Studio` или настроенная среда для разработки на `C#` в `VS Code`
+
+#### Скачать `Visual Studio`: https://visualstudio.microsoft.com/ru/downloads/
+
+#### Настройка среды под `VS Code`: https://www.youtube.com/watch?v=ZVGutgqBMUM
