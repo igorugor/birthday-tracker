@@ -10,6 +10,18 @@ namespace BirthdayTracker.Controllers
     {
         private readonly AppDbContext _context = context;
 
+        private static void DeleteImageFile(string? imagePath)
+        {
+            if (string.IsNullOrEmpty(imagePath)) return;
+
+            var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", imagePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+
+            if (System.IO.File.Exists(fullPath))
+            {
+                System.IO.File.Delete(fullPath);
+            }
+        }
+
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers(string? fromDate, string? toDate, int page = 1, int pageSize = 10)
         {
@@ -61,10 +73,11 @@ namespace BirthdayTracker.Controllers
 
                 return birthMonthDay == fromMonthDay;
             }).Select(u => new UserDTO
-                {
-                    Id = u.Id,
-                    Name = u.Name,
-                    BirthDay = DateTimeOffset.FromUnixTimeSeconds(u.BirthDay).UtcDateTime
+            {
+                Id = u.Id,
+                Name = u.Name,
+                BirthDay = DateTimeOffset.FromUnixTimeSeconds(u.BirthDay).UtcDateTime,
+                ImageUrl = u.ImageUrl != null ? $"{$"{Request.Scheme}://{Request.Host}"}/{u.ImageUrl}" : null
                 }).OrderBy(u => u.BirthDay).Skip((page - 1) * pageSize).Take(pageSize)
                 .ToArray();
 
@@ -83,7 +96,8 @@ namespace BirthdayTracker.Controllers
                 {
                     Id = u.Id,
                     Name = u.Name,
-                    BirthDay = DateTimeOffset.FromUnixTimeSeconds(u.BirthDay).UtcDateTime
+                    BirthDay = DateTimeOffset.FromUnixTimeSeconds(u.BirthDay).UtcDateTime,
+                    ImageUrl = u.ImageUrl != null ? $"{$"{Request.Scheme}://{Request.Host}"}/{u.ImageUrl}" : null
                 }).OrderBy(u => u.BirthDay).Skip((page - 1) * pageSize).Take(pageSize)
                 .ToArray();
 
@@ -100,80 +114,105 @@ namespace BirthdayTracker.Controllers
             var user = await _context.Users.FindAsync(id);
             if (user == null)
             {
-                return NotFound();
+                return NotFound(new {message = "User not found"});
             }
 
             return new UserDTO
             {
                 Id = user.Id,
                 Name = user.Name,
-                BirthDay = DateTimeOffset.FromUnixTimeSeconds(user.BirthDay).UtcDateTime
+                BirthDay = DateTimeOffset.FromUnixTimeSeconds(user.BirthDay).UtcDateTime,
+                ImageUrl = user.ImageUrl != null ? $"{$"{Request.Scheme}://{Request.Host}"}/{user.ImageUrl}" : null
             };
         }
 
         [HttpPost]
-        public async Task<ActionResult<User>> CreateUser(UserDTO userDto)
+        public async Task<ActionResult<User>> CreateUser([FromForm] UserFormData userData)
         {
-            if (userDto.Name.Length == 0)
+            if (userData.Name.Length == 0)
             {
-                return StatusCode(StatusCodes.Status400BadRequest, new { message = "Name must not be empty" });
+                return BadRequest(new { message = "Name must not be empty" });
             }
 
-            if (userDto.BirthDay == null || userDto.BirthDay == default)
+            if (userData.BirthDay == null || userData.BirthDay == default)
             {
                 return BadRequest(new { message = "BirthDay is required and must be a valid ISO 8601 date" });
             }
 
-            if (userDto.BirthDay > DateTime.UtcNow)
+            if (userData.BirthDay > DateTime.UtcNow)
             {
                 return BadRequest(new { message = "BirthDay cannot be in the future" });
             }
 
-            long birthDayUnix = ((DateTimeOffset)userDto.BirthDay.ToUniversalTime()).ToUnixTimeSeconds();
+            long birthDayUnix = ((DateTimeOffset)userData.BirthDay.ToUniversalTime()).ToUnixTimeSeconds();
 
             var user = new User
             {
-                Name = userDto.Name,
+                Name = userData.Name,
                 BirthDay = birthDayUnix,
             };
 
+            if (userData.Image != null && userData.Image.Length > 0)
+            {
+                string fileName = $"{Guid.NewGuid()}{Path.GetExtension(userData.Image.FileName)}";
+                string path = Path.Combine("wwwroot/images/users", fileName);
+
+                Directory.CreateDirectory("wwwroot/images/users");
+
+                using var stream = new FileStream(path, FileMode.Create);
+                await userData.Image.CopyToAsync(stream);
+
+                user.ImageUrl = $"images/users/{fileName}";
+            }
+
             _context.Users.Add(user);
+
             await _context.SaveChangesAsync();
 
-            return user;
+            return NoContent();
         }
 
-        [HttpPut("{id}")]
-        public async Task<ActionResult> UpdateUser(int id, UserDTO userDto)
+        [HttpPut]
+        public async Task<ActionResult> UpdateUser([FromForm] UserFormData userData)
         {
-            if (id != userDto.Id )
+            var existingUser = await _context.Users.FindAsync(userData.Id);
+            if (existingUser == null)
             {
-                return BadRequest();
+                return NotFound(new {message = "User not found"});
             }
 
-            if (userDto.Name.Length == 0)
+            if (userData.Name.Length == 0)
             {
-                return StatusCode(StatusCodes.Status400BadRequest, new { message = "Name must not be empty" });
+                return BadRequest(new { message = "Name must not be empty" });
             }
 
-            if (userDto.BirthDay == null || userDto.BirthDay == default)
+            if (userData.BirthDay == null || userData.BirthDay == default)
             {
                 return BadRequest(new { message = "BirthDay is required and must be a valid ISO 8601 date" });
             }
 
-            if (userDto.BirthDay > DateTime.UtcNow)
+            if (userData.BirthDay > DateTime.UtcNow)
             {
                 return BadRequest(new { message = "BirthDay cannot be in the future" });
             }
 
-            var existingUser = await _context.Users.FindAsync(id);
-            if (existingUser == null)
-            {
-                return NotFound();
-            }
+            existingUser.Name = userData.Name;
+            existingUser.BirthDay = ((DateTimeOffset)userData.BirthDay.ToUniversalTime()).ToUnixTimeSeconds();
 
-            existingUser.Name = userDto.Name;
-            existingUser.BirthDay = ((DateTimeOffset)userDto.BirthDay.ToUniversalTime()).ToUnixTimeSeconds();
+            if (userData.Image != null && userData.Image.Length > 0)
+            {
+                string fileName = $"{Guid.NewGuid()}{Path.GetExtension(userData.Image.FileName)}";
+                string path = Path.Combine("wwwroot/images/users", fileName);
+
+                Directory.CreateDirectory("wwwroot/images/users");
+
+                using var stream = new FileStream(path, FileMode.Create);
+                await userData.Image.CopyToAsync(stream);
+
+                DeleteImageFile(existingUser.ImageUrl);
+
+                existingUser.ImageUrl = $"images/users/{fileName}";
+            }
 
             await _context.SaveChangesAsync();
 
@@ -184,8 +223,11 @@ namespace BirthdayTracker.Controllers
         public async Task<ActionResult> DeleteUser(int id)
         {
             var user = await _context.Users.FindAsync(id);
-            if (user == null) return NotFound();
+            if (user == null) return NotFound(new {message = "User not found"});
 
+            if (user.ImageUrl != null) {
+                DeleteImageFile(user.ImageUrl);
+            }
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
             return NoContent();
