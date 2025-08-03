@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using BirthdayTracker.Models;
 using BirthdayTracker.Database;
-using Microsoft.EntityFrameworkCore;
 
 namespace BirthdayTracker.Controllers
 {
@@ -12,7 +11,7 @@ namespace BirthdayTracker.Controllers
         private readonly AppDbContext _context = context;
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers(string? fromDate, string? toDate)
+        public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers(string? fromDate, string? toDate, int page = 1, int pageSize = 10)
         {
             DateTime fromDateParam = DateTime.UtcNow.Date;
 
@@ -55,8 +54,21 @@ namespace BirthdayTracker.Controllers
             int fromMonthDay = fromDateParam.Month * 100 + fromDateParam.Day;
             int toMonthDay = toDateParam.Month * 100 + toDateParam.Day;
 
+            var usersWithBirthdayOnFromDate = _context.Users.AsEnumerable().Where(u =>
+            {
+                var birthDateUtc = DateTimeOffset.FromUnixTimeSeconds(u.BirthDay).UtcDateTime;
+                int birthMonthDay = birthDateUtc.Month * 100 + birthDateUtc.Day;
 
-            var users = _context.Users
+                return birthMonthDay == fromMonthDay;
+            }).Select(u => new UserDTO
+                {
+                    Id = u.Id,
+                    Name = u.Name,
+                    BirthDay = DateTimeOffset.FromUnixTimeSeconds(u.BirthDay).UtcDateTime
+                }).OrderBy(u => u.BirthDay).Skip((page - 1) * pageSize).Take(pageSize)
+                .ToArray();
+
+            var usersWithBirthdayOnToDate = _context.Users
                 .AsEnumerable()
                 .Where(u =>
                 {
@@ -64,18 +76,39 @@ namespace BirthdayTracker.Controllers
                     int birthMonthDay = birthDateUtc.Month * 100 + birthDateUtc.Day;
 
                     return fromMonthDay <= toMonthDay
-                        ? (birthMonthDay >= fromMonthDay && birthMonthDay <= toMonthDay)
-                        : (birthMonthDay >= fromMonthDay || birthMonthDay <= toMonthDay);
+                        ? (birthMonthDay > fromMonthDay && birthMonthDay <= toMonthDay)
+                        : (birthMonthDay > fromMonthDay || birthMonthDay <= toMonthDay);
                 })
                 .Select(u => new UserDTO
                 {
                     Id = u.Id,
                     Name = u.Name,
                     BirthDay = DateTimeOffset.FromUnixTimeSeconds(u.BirthDay).UtcDateTime
-                })
+                }).OrderBy(u => u.BirthDay).Skip((page - 1) * pageSize).Take(pageSize)
                 .ToArray();
 
-            return Ok(users);
+            return Ok(new BirthdaysDTO
+            {
+                OnFromDate = usersWithBirthdayOnFromDate,
+                BeforeToDate = usersWithBirthdayOnToDate
+            });
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<UserDTO>> GetTodo(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            return new UserDTO
+            {
+                Id = user.Id,
+                Name = user.Name,
+                BirthDay = DateTimeOffset.FromUnixTimeSeconds(user.BirthDay).UtcDateTime
+            };
         }
 
         [HttpPost]
