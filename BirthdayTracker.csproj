@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <Folder Include="client/" />
+    <Folder Include="README/" />
   </ItemGroup>
 
 </Project>
