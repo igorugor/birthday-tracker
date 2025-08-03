@@ -1,4 +1,4 @@
-namespace BirthdayTracker;
+namespace BirthdayTracker.Models;
 
 public class WeatherForecast
 {
