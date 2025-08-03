@@ -5,6 +5,8 @@ import moment from 'moment';
 import { Link } from 'react-router';
 import { paths } from '../../constants';
 
+import './RootPage.css';
+
 export const RootPage = () => {
 	const queryClient = useQueryClient();
 	const [page] = useState(1);
@@ -31,26 +33,31 @@ export const RootPage = () => {
 	});
 
 	return (
-		<div>
-			<h1 id="tabelLabel">Users</h1>
+		<div className="page">
+			<h1 id="tabelLabel">Пользователи</h1>
 			<h2>
-				<Link to={paths.create}>Create user</Link>
+				<Link to={paths.create}>Добавить пользователя</Link>
 			</h2>
 			<h2>
-				<Link to={paths.usersList}>See all users</Link>
+				<Link to={paths.usersList}>Полный список пользователей</Link>
 			</h2>
 			{isFetching ? (
-				<p>Loading ....</p>
+				<p>Загрузка ....</p>
 			) : (
 				<>
-					<h3>Today's birthdays</h3>
-					<div>
+					<h3>Отмечают ДР сегодня</h3>
+					<div className="users-container">
 						{data?.onFromDate.map((user) => (
-							<p key={user.id}>
+							<p key={user.id} className="user-field">
+								{user.imageUrl ? (
+									<img src={user.imageUrl} width={80} height={80} />
+								) : (
+									<h6>Аватар отсутствует</h6>
+								)}
 								<Link to={`/users/${user.id}`}>
-									<span>
-										{user.name} {moment.utc(user.birthDay).format('DD-MM-YYYY')}
-									</span>
+									<span>Имя: {user.name}</span>
+									<br />
+									<span>Дата рождения: {moment.utc(user.birthDay).format('DD-MM-YYYY')}</span>
 								</Link>
 								<button
 									onClick={() => {
@@ -62,14 +69,19 @@ export const RootPage = () => {
 							</p>
 						))}
 					</div>
-					<h3>Incoming birthdays (in 7 days)</h3>
-					<div>
+					<h3>Ближайшие ДР (в течение 7 дней)</h3>
+					<div className="users-container">
 						{data?.beforeToDate.map((user) => (
-							<p key={user.id}>
+							<p key={user.id} className="user-field">
+								{user.imageUrl ? (
+									<img src={user.imageUrl} width={80} height={80} />
+								) : (
+									<h6>Аватар отсутствует</h6>
+								)}
 								<Link to={`/users/${user.id}`}>
-									<span>
-										{user.name} {moment.utc(user.birthDay).format('DD-MM-YYYY')}
-									</span>
+									<span>Имя: {user.name}</span>
+									<br />
+									<span>Дата рождения: {moment.utc(user.birthDay).format('DD-MM-YYYY')}</span>
 								</Link>
 								<button
 									onClick={() => {

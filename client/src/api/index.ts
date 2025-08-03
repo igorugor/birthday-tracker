@@ -4,7 +4,7 @@ const mainApi = axios.create({
 	baseURL: 'http://localhost:5055',
 });
 
-export type User = { id: number; name: string; birthDay: string };
+export type User = { id: number; name: string; birthDay: string; imageUrl: string | null };
 
 export type FetchUsersParams = {
 	fromDate?: string;
@@ -34,12 +34,22 @@ interface CreateUserRequest {
 	birthday: string;
 }
 
-export const createUser = async ({ name, birthday }: CreateUserRequest) =>
-	mainApi.post<CreateUserRequest, AxiosResponse<User>>('api/users', { name, birthday }).then((res) => res.data);
-
-export const updateUser = async ({ id, name, birthday }: CreateUserRequest) =>
+export const createUser = async (data: FormData) =>
 	mainApi
-		.put<CreateUserRequest, AxiosResponse<User>>(`api/users/${id}`, { id, name, birthday })
+		.post<CreateUserRequest, AxiosResponse<User>>('api/users', data, {
+			headers: {
+				'Content-Type': 'multipart/form-data',
+			},
+		})
+		.then((res) => res.data);
+
+export const updateUser = async (data: FormData) =>
+	mainApi
+		.put<CreateUserRequest, AxiosResponse<User>>('api/users', data, {
+			headers: {
+				'Content-Type': 'multipart/form-data',
+			},
+		})
 		.then((res) => res.data);
 
 export const deleteUser = async (id: number) => mainApi.delete(`api/users/${id}`).then((res) => res.data);
